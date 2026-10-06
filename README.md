@@ -1,197 +1,302 @@
-# Proyecto Integrador: Sistema Predictivo de Fuga de Clientes con Segmentación de Valor (Customer Churn)
+# Proyecto Integrador: Predicción de Fuga de Clientes (Customer Churn)
 
 **Curso:** Data Mining Tools – CC209  
 **Docente:** Carlos Fernando Montoya Cubas  
 **Institución:** Universidad Peruana de Ciencias Aplicadas (UPC)  
-**Hito Evaluado:** Trabajo Parcial (TP1) – Semana 7 (10% del curso)  
-**Modalidad:** Trabajo Grupal  
+**Hito:** Trabajo Parcial (TP1) – Semana 7  
+**Modalidad:** Trabajo grupal
 
 ---
 
-## 1. Definición del Problema de Data Science (Rúbrica: 3 Pts)
+## 1. Definición del problema de Data Science
 
-### 1.1. Contexto de Negocio y Necesidad
-En la industria de telecomunicaciones y servicios digitales por suscripción (*Telco / SaaS*), la tasa promedio de deserción mensual (*churn rate*) ronda el 20% al 30%. La adquisición de un nuevo cliente representa un costo entre 5 y 7 veces superior al de retener a un cliente actual. Sin embargo, aplicar campañas masivas e indiferenciadas de descuentos o beneficios resulta financieramente insostenible y erosiona los márgenes operativos.
+### 1.1 Contexto y necesidad
 
-### 1.2. Unidad de Análisis
-**Un contrato / cliente individual activo durante un ciclo mensual de facturación.**
+El proyecto aborda el problema de **customer churn** en una empresa de telecomunicaciones. El objetivo es identificar clientes con mayor riesgo de cancelar el servicio para priorizar acciones de retención y evitar campañas indiscriminadas sobre toda la cartera.
 
-### 1.3. Pregunta Principal del Proyecto
-> *¿Cuál es la probabilidad de que un cliente cancele su contrato de servicios en el próximo ciclo de facturación, y qué variables contractuales, técnicas y de consumo explican con mayor peso dicha decisión para priorizar intervenciones preventivas rentables?*
+### 1.2 Unidad de análisis
 
-### 1.4. Tipo de Problema de Data Science
-* **TP1:** Clasificación binaria supervisada con desbalance moderado (~73.5% retención vs. ~26.5% fuga).
-* **TF1 (Proyección):** Aprendizaje semi-supervisado / no supervisado complementario mediante **Clustering (K-Means / RFM)** para segmentar clientes por *Customer Lifetime Value* (CLV) cruzado con riesgo de fuga.
+**Un cliente/contrato individual registrado en el dataset.**
 
-### 1.5. Criterios de Utilidad y Éxito de la Solución
-Para evitar formulaciones triviales, el proyecto no busca únicamente maximizar métricas genéricas, sino satisfacer criterios de decisión económica:
-1. **Superación del Baseline:** Superar significativamente al baseline trivial (Dummy) y a una regla de negocio heurística en términos de discriminación en clases minoritarias (**PR-AUC superior a 0.60** vs 0.265 del azar).
-2. **Cobertura de Riesgo (`Recall` $\ge 0.75$):** Detectar al menos al 75% de los clientes que efectivamente van a abandonar la empresa.
-3. **Rentabilidad Neta Positiva:** Demostrar que el valor económico generado por clientes retenidos mediante alertas tempranas supera holgadamente el costo combinado de los incentivos comerciales (falsos positivos) y el valor de vida perdido (falsos negativos).
+### 1.3 Pregunta principal
 
----
+> ¿Qué clientes presentan mayor probabilidad de churn y qué variables contractuales, de servicio y facturación están asociadas con ese riesgo, de manera que puedan priorizarse intervenciones preventivas?
 
-## 2. Dataset y Procedencia
+### 1.4 Tipo de problema
 
-* **Fuente:** Repositorio público oficial de *IBM Cognos Analytics / Kaggle (Telco Customer Churn)*.
-* **Licencia:** Open Data Commons / Apache 2.0 (Uso libre para fines académicos y de investigación).
-* **Dimensiones:** 7,043 observaciones y 21 atributos.
-* **Período Temporal:** Registro transversal consolidado de clientes residenciales en California (Q3).
-* **Variable Objetivo:** `Churn` (Codificada como `1 = Fuga / Yes` y `0 = Retención / No`).
+- **TP1:** clasificación binaria supervisada con desbalance moderado (~73.5% retención vs. ~26.5% fuga).
+- **TF1 (proyección):** experimentación sistemática, interpretabilidad, análisis de errores y una técnica adicional solo si resulta pertinente para los datos y el problema.
 
-### 2.1. Diccionario de Variables Relevante
+### 1.5 Criterios de utilidad definidos por el grupo
 
-| Variable | Tipo | Descripción y Dominio |
-| :--- | :--- | :--- |
-| `customerID` | Categórica (ID) | Identificador alfanumérico único (excluido del modelamiento para evitar leakage). |
-| `gender` | Categórica binaria | Género del cliente (`Male`, `Female`). |
-| `SeniorCitizen` | Categórica binaria | Indicador si el cliente es adulto mayor (`1`, `0`). |
-| `Partner` / `Dependents` | Categórica binaria | Si el cliente tiene cónyuge / dependientes (`Yes`, `No`). |
-| `tenure` | Numérica discreta | Número de meses que el cliente ha permanecido con la compañía (0 a 72). |
-| `PhoneService` / `MultipleLines`| Categórica | Si cuenta con telefonía fija y líneas múltiples (`Yes`, `No`, `No phone service`). |
-| `InternetService` | Categórica nominal | Proveedor de conexión (`DSL`, `Fiber optic`, `No`). |
-| `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies` | Categórica | Servicios de valor agregado suscritos (`Yes`, `No`, `No internet service`). |
-| `Contract` | Categórica ordinal | Duración del compromiso contractual (`Month-to-month`, `One year`, `Two year`). |
-| `PaperlessBilling` | Categórica binaria | Modalidad de facturación electrónica sin papel (`Yes`, `No`). |
-| `PaymentMethod` | Categórica nominal | Canal de pago (`Electronic check`, `Mailed check`, `Bank transfer`, `Credit card`). |
-| `MonthlyCharges` | Numérica continua | Monto facturado mensual recurrente (\$18.25 a \$118.75). |
-| `TotalCharges` | Numérica continua | Importe monetario acumulado facturado (\$18.80 a \$8684.80). |
-| **`Churn`** | **Binaria (Objetivo)** | **Si el cliente canceló el servicio (`Yes` $\rightarrow 1$, `No` $\rightarrow 0$).** |
+1. **Superar los baselines:** PR-AUC superior a 0.60 frente a una prevalencia cercana a 0.265.
+2. **Cobertura de riesgo:** meta interna de `Recall >= 0.75` para la clase churn.
+3. **Utilidad económica simulada positiva:** bajo los supuestos de costo/beneficio definidos por el grupo.
 
-### 2.2. Problemas de Calidad Identificados y Limitaciones
-* **Espacios en Blanco en `TotalCharges`:** 11 registros presentaban una cadena vacía `' '` en lugar de un número, provocando que la columna fuera leída erróneamente como texto (`object`). Al cruzar estos registros, se demostró que corresponden exactamente a clientes nuevos con `tenure = 0` (recién suscritos antes del primer cierre mensual) y ninguno había desertado. Se convirtió a tipo numérico imputando 0.
-* **Limitación Temporal:** Al ser un corte transversal, no se dispone de registros de series temporales de llamadas diarias o logs de red, por lo que la modelación se enfoca en características contractuales y de perfil.
+Estos criterios son objetivos internos del proyecto, no requisitos impuestos por la rúbrica.
 
 ---
 
-## 3. Matriz de Decisiones de Herramientas (Rúbrica Sección 6)
+## 2. Dataset y procedencia
 
-| Necesidad | Herramienta Elegida | Alternativa Considerada | Justificación Técnica |
-| :--- | :--- | :--- | :--- |
-| **EDA** | `Pandas` + `Seaborn` / `Matplotlib` | Sweetviz / Pandas Profiling | Generación de visualizaciones orientadas a hipótesis de negocio específicas en lugar de reportes automáticos ciegos; permite documentar explícitamente "lo que los datos muestran" vs. "lo que el equipo interpreta". |
-| **Preparación** | `Scikit-Learn ColumnTransformer` | Pandas `get_dummies` directo | `get_dummies` induce data leakage al codificar categorías basadas en toda la muestra; `ColumnTransformer` encapsula `OneHotEncoder` y `StandardScaler` asegurando que los transformadores se ajusten **únicamente** sobre Train. |
-| **Modelamiento Preliminar** | `LogisticRegression(class_weight='balanced')` y `RandomForestClassifier` | Redes Neuronales / XGBoost sin tunear | Cumple con evaluar dos familias distintas (lineal paramétrica vs ensamble no paramétrico de árboles) con bajo costo computacional y alta interpretabilidad inicial para el corte de Semana 7. |
-| **Experimentación (TF1)** | `Optuna` + `MLflow` | GridSearchCV manual | Optuna ofrece optimización bayesiana eficiente del espacio de hiperparámetros; MLflow garantiza trazabilidad de experimentos y artefactos para el TF1. |
-| **Interpretabilidad (TF1)**| `SHAP` (SHapley Additive exPlanations) | Feature Importance MDI básica | La importancia nativa de impureza en árboles sobreestima variables numéricas de alta cardinalidad; SHAP ofrece explicaciones locales individualizadas (Waterfall plots) matemáticamente fundamentadas. |
-| **Despliegue (TF1)** | `Streamlit` | Flask / Django | Permite construir en Python puro una interfaz web interactiva con simulador en tiempo real y gráficos explicativos para usuarios de negocio sin sobrecarga de frontend. |
+- **Dataset:** Telco Customer Churn.
+- **Fuente declarada:** IBM Cognos Analytics sample / Kaggle (`blastchar`).
+- **Dimensiones:** 7,043 observaciones y 21 atributos.
+- **Variable objetivo:** `Churn` (`1 = fuga`, `0 = retención`).
+- **Licencia:** **pendiente de verificación en la fuente original antes de la entrega final**.
+- **Limitación principal:** conjunto transversal; no contiene un historial transaccional o temporal detallado que permita modelar la evolución del cliente en el tiempo.
 
----
+### 2.1 Variables relevantes
 
-## 4. Hallazgos Clave del EDA
+| Variable | Tipo | Descripción |
+| --- | --- | --- |
+| `customerID` | ID | Identificador único; se excluye del modelamiento. |
+| `tenure` | Numérica discreta | Meses del cliente con la compañía. |
+| `MonthlyCharges` | Numérica continua | Cargo mensual. |
+| `TotalCharges` | Numérica continua | Cargos acumulados. |
+| `Contract` | Categórica | Month-to-month, One year, Two year. |
+| `InternetService` | Categórica | DSL, Fiber optic, No. |
+| `TechSupport` | Categórica | Estado del servicio de soporte técnico. |
+| `PaymentMethod` | Categórica | Método de pago. |
+| `Churn` | Binaria | Variable objetivo. |
 
-1. **Desbalance de Clases:** 26.54% de deserción frente a 73.46% de retención. El *Accuracy* queda descartado como métrica guía.
-2. **Modalidad Contractual:** Los clientes con contrato mensual (*Month-to-month*) presentan una tasa de fuga del **42.7%**, contra solo **11.3%** en contratos anuales y **2.8%** en contratos bianuales.
-3. **Ventana Crítica de Antigüedad:** El pico de abandono se concentra durante los **primeros 5 meses** (fenómeno de *onboarding friction*). Si el cliente supera el primer año, la retención se consolida.
-4. **Vulnerabilidad en Fibra Óptica:** Clientes con Internet de Fibra Óptica sin Soporte Técnico (`TechSupport = No`) presentan una fuga del **49.4%**, debido al costo elevado (\$80+/mes) sumado a la falta de asistencia ante incidencias.
-5. **Canal de Pago:** El pago mediante cheque electrónico (*Electronic check*) presenta una deserción del **45.3%**, duplicando a los métodos con débito automático bancario.
+El diccionario completo se conserva en el informe y en el EDA.
 
----
+### 2.2 Calidad de datos
 
-## 5. Prevención Rigurosa de Data Leakage (Rúbrica: 2 Pts)
+- Se identificaron **11 valores vacíos en `TotalCharges`**.
+- Los 11 casos corresponden a clientes con `tenure = 0`.
+- Por regla lógica del problema, esos registros se representan con `TotalCharges = 0`.
+- Después de esta corrección no quedan faltantes en `TotalCharges`.
+- Se verificaron **0 duplicados completos**.
+- `customerID` se excluye del modelamiento por ser un identificador.
+- `SeniorCitizen` se trata como variable categórica binaria.
 
-Para garantizar la integridad del flujo experimental:
-1. **Partición Previa a Cualquier Transformación:** Se realiza un `train_test_split` estratificado (80% Train, 20% Test) inmediatamente tras la carga de datos.
-2. **Estratificación Justificada:** Dado el desbalance de clases (26.5%), la estratificación preserva idéntica prevalencia en entrenamiento (5,634 muestras) y prueba (1,409 muestras).
-3. **Encapsulamiento en Pipeline:** Las medias, medianas, desviaciones estándar y categorías únicas para `OneHotEncoder` se calculan exclusivamente en `X_train` (`fit`) y se aplican sin re-ajuste a `X_test` (`transform`).
-
----
-
-## 6. Resultados Comparativos de Modelos y Evaluación de Negocio (Rúbrica: 3 Pts)
-
-### 6.1. Definición de la Función de Utilidad Económica
-* **Falso Negativo (FN):** Cliente que cancela sin ser detectado. Pérdida del Customer Lifetime Value: **-\$500 USD**.
-* **Falso Positivo (FP):** Cliente que no pensaba irse pero recibe un incentivo/descuento preventivo: **-\$50 USD**.
-* **Verdadero Positivo (TP):** Cliente en riesgo detectado a tiempo y retenido con éxito mediante oferta: **+\$350 USD netos**.
-* **Verdadero Negativo (TN):** Cliente retenido no contactado: **\$0 USD**.
-
-### 6.2. Tabla de Resultados sobre Muestra de Prueba (1,409 clientes)
-
-| Modelo | Accuracy | Recall (Clase 1) | Precision (Clase 1) | ROC-AUC | PR-AUC | Valor Económico Neto ($ USD) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Baseline Trivial (Dummy Most Frequent)** | 73.46% | 0.00% | 0.00% | 0.500 | 0.265 | **-\$187,000** |
-| **Baseline Heurístico (Mes-a-Mes & Tenure $\le 6$)** | 76.93% | 45.45% | 58.42% | 0.669 | 0.410 | **-\$48,550** |
-| **Modelo 1: Regresión Logística (Balanced)** | 73.88% | **78.34%** | 50.52% | **0.842** | 0.633 | **+\$47,700** |
-| **Modelo 2: Random Forest (Balanced, depth=10)** | **75.59%** | **78.88%** | **52.68%** | 0.841 | **0.655** | **+\$50,500** |
-
-### 6.3. Interpretación Crítica de Resultados
-* **El engaño del Accuracy:** El baseline trivial obtiene un 73.5% de exactitud aparente pero causa una pérdida económica de **-\$187,000 USD** al no prevenir ni una sola fuga.
-* **Aporte Demostrado del Machine Learning:** Ambos modelos de ML logran capturar casi el **79% de los clientes en fuga** (295 de 374), generando una utilidad neta superior a los **+\$50,000 USD** frente a las pérdidas del baseline heurístico.
-* **Modelo Preliminar Seleccionado:** **Random Forest** obtiene el mejor balance global con un **PR-AUC de 0.655** y la mayor rentabilidad económica esperada.
+El `SimpleImputer(strategy="median")` se mantiene dentro del pipeline como respaldo ante faltantes numéricos inesperados y aprende sus estadísticas únicamente a partir de los datos usados para entrenamiento.
 
 ---
 
-## 7. Estado del Proyecto y Plan hacia el Trabajo Final (TF1 — Semana 15) (Rúbrica: 2 Pts)
+## 3. Decisiones de herramientas
 
-### 7.1. Limitaciones Identificadas en el TP1
-1. Los modelos preliminares utilizan un umbral fijo de probabilidad ($0.50$), sin calibración matemática específica para minimizar la función de costo financiero.
-2. No se ha implementado búsqueda sistemática de hiperparámetros ni algoritmos de Gradient Boosting.
-3. Se trata a la cartera como un grupo homogéneo, sin segmentación por valor del cliente (*Customer Lifetime Value*).
-
-### 7.2. Hoja de Ruta para el TF1
-* **Hito 1 (Semana 8–10) – Experimentación Avanzada:** Integración de **LightGBM / XGBoost**, optimización de hiperparámetros con **Optuna** y seguimiento de corridas en **MLflow**.
-* **Hito 2 (Semana 11–12) – Técnica Adicional (Clustering):** Aplicación de **K-Means / RFM** para segmentar clientes en 3 niveles de valor comercial y cruzar con la probabilidad de fuga.
-* **Hito 3 (Semana 12–13) – Interpretabilidad con SHAP:** Análisis global (Beeswarm) y explicaciones locales (Waterfall plots) para sustentar decisiones ante el área comercial.
-* **Hito 4 (Semana 13–14) – Calibración de Umbral y Análisis de Casos de Error:** Ajuste del umbral de corte para maximizar la utilidad económica y auditoría detallada de falsos positivos y negativos.
-* **Hito 5 (Semana 14–15) – Despliegue Funcional:** Construcción de un dashboard y simulador en **Streamlit** con el pipeline serializado en `.joblib`.
+| Necesidad | Herramienta elegida | Alternativa considerada | Justificación |
+| --- | --- | --- | --- |
+| EDA | Pandas + Seaborn / Matplotlib | Herramientas de profiling automático | Permite formular preguntas específicas y acompañar cada visualización con interpretación. |
+| Preparación | `Pipeline` + `ColumnTransformer` | Preprocesamiento manual / `get_dummies` | Encapsula imputación, escalado y One-Hot Encoding en un flujo reproducible y permite ajustar transformadores solo con los datos de entrenamiento. `get_dummies` no implica leakage por sí mismo; el riesgo aparece si se aprende información del conjunto reservado antes de evaluar. |
+| Modelamiento | Logistic Regression + Random Forest | Árbol individual / boosting | Compara una familia lineal interpretable con un ensamble no lineal, ambas apropiadas para clasificación tabular. |
+| Evaluación | PR-AUC, Recall, Precision, F1, ROC-AUC y matriz de confusión | Accuracy aislada | La clase churn es minoritaria; por ello Accuracy no es suficiente para decidir. |
+| Experimentación TF1 | Validación cruzada estratificada + búsqueda de hiperparámetros | Un único split | Permitirá medir estabilidad y reducir dependencia de una sola partición. |
+| Interpretabilidad TF1 | SHAP / importancia de variables según modelo | Solo métricas globales | Permitirá explicar el comportamiento del modelo a nivel global y local. |
+| Despliegue TF1 | Streamlit | API/web app más compleja | Permite construir una demostración funcional de manera rápida y reproducible. |
 
 ---
 
-## 8. Estructura del Repositorio
+## 4. Hallazgos principales del EDA
+
+1. **Desbalance de clases:** 26.54% churn frente a 73.46% no churn.
+2. **Contrato:** la tasa observada de churn es mayor en `Month-to-month` que en contratos de uno y dos años.
+3. **Antigüedad:** se observa mayor concentración de churn entre clientes con menor `tenure`.
+4. **Fibra óptica y soporte técnico:** el grupo `Fiber optic` sin `TechSupport` presenta una tasa de churn elevada dentro del dataset.
+5. **Método de pago:** `Electronic check` presenta una tasa de churn mayor que otros métodos de pago.
+
+Estos resultados representan **asociaciones observadas en la muestra y no relaciones causales**.
+
+---
+
+## 5. Separación de datos y prevención de leakage
+
+Se utiliza una partición estratificada con `random_state=42`:
+
+| Conjunto | Registros | Proporción | Churn |
+| --- | ---: | ---: | ---: |
+| Train | 4,930 | ~70% | 26.53% |
+| Validation | 1,056 | ~15% | 26.52% |
+| Test | 1,057 | ~15% | 26.58% |
+
+Flujo de evaluación:
 
 ```text
-TP/
+Train
+  -> entrenar Logistic Regression y Random Forest
+  -> Validation para comparar y seleccionar por PR-AUC
+  -> reentrenar el candidato elegido con Train + Validation
+  -> Test para evaluación final
+```
+
+Las transformaciones estadísticas se encapsulan en el `Pipeline`. La imputación por mediana, el escalado y las categorías del `OneHotEncoder` se ajustan con los datos usados para entrenamiento en cada etapa; Validation y Test no se utilizan para seleccionar parámetros del preprocesamiento.
+
+---
+
+## 6. Modelos y evaluación
+
+### 6.1 Modelos comparados en Validation
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | Valor económico simulado |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Regresión Logística (balanced) | 0.7405 | 0.5067 | **0.8143** | 0.6247 | **0.8448** | 0.6313 | **+$42,700** |
+| Random Forest (balanced, depth=10) | **0.7689** | **0.5464** | 0.7571 | **0.6347** | 0.8417 | **0.6327** | +$31,400 |
+
+**Criterio principal de selección:** PR-AUC en Validation.  
+Random Forest queda como candidato preliminar con `PR-AUC = 0.6327`, frente a `0.6313` de Regresión Logística. La diferencia es **mínima**, por lo que no se interpreta como superioridad concluyente.
+
+### 6.2 Evaluación final en Test
+
+Después de seleccionar el candidato, Random Forest se reentrena con Train + Validation y se evalúa en Test.
+
+| Modelo | Accuracy | Precision | Recall | F1 | ROC-AUC | PR-AUC | Valor económico simulado |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline trivial (Dummy) | 0.7342 | 0.0000 | 0.0000 | 0.0000 | 0.5000 | 0.2658 | -$140,500 |
+| Baseline heurístico (Month-to-month & tenure <= 6) | 0.7635 | 0.5721 | 0.4377 | 0.4960 | 0.6596 | 0.3999 | -$40,550 |
+| **Random Forest seleccionado** | **0.7833** | **0.5756** | **0.7046** | **0.6336** | **0.8400** | **0.6698** | **+$20,500** |
+
+Matriz de confusión del Random Forest en Test:
+
+- TN = 630
+- FP = 146
+- FN = 83
+- TP = 198
+
+### 6.3 Interpretación crítica
+
+- El modelo seleccionado supera claramente a los dos baselines en PR-AUC.
+- La meta interna de `PR-AUC > 0.60` sí se cumple en Test (`0.6698`).
+- La utilidad económica simulada es positiva (`+$20,500`) bajo los supuestos definidos por el grupo.
+- La meta interna de `Recall >= 0.75` **no se cumple en Test** (`0.7046`). Esto se reporta como una limitación del TP1 y no se utiliza Test para volver a seleccionar otro modelo.
+- El valor económico es una **simulación**; no representa ganancias reales observadas.
+
+### 6.4 Supuestos de la simulación económica
+
+| Resultado | Impacto simulado |
+| --- | ---: |
+| Falso negativo (FN) | -$500 |
+| Falso positivo (FP) | -$50 |
+| Verdadero positivo (TP) | +$350 |
+| Verdadero negativo (TN) | $0 |
+
+Estos valores son supuestos de trabajo del grupo y requieren análisis de sensibilidad en el Trabajo Final.
+
+---
+
+## 7. Limitaciones del TP1 y plan hacia TF1
+
+### 7.1 Limitaciones actuales
+
+- Umbral de decisión fijo en 0.50.
+- Hiperparámetros preliminares, sin búsqueda sistemática.
+- Aún no se mide estabilidad con validación cruzada.
+- La meta interna de Recall no se sostiene en el Test final.
+- Los costos económicos son supuestos del grupo.
+- El baseline heurístico fue inspirado por el EDA; en una evaluación completamente ciega, las reglas de dominio deberían fijarse antes de observar un holdout reservado.
+- El dataset no contiene suficiente información transaccional para afirmar que se dispone de un RFM o CLV real.
+
+### 7.2 Próximos pasos
+
+1. Aplicar `StratifiedKFold` y reportar promedio y dispersión de métricas.
+2. Realizar búsqueda sistemática de hiperparámetros.
+3. Evaluar una técnica adicional solo si es pertinente para los datos y el objetivo del proyecto.
+4. Analizar el umbral de decisión y los falsos positivos/falsos negativos.
+5. Incorporar interpretabilidad global y local.
+6. Si se realiza clustering, utilizar variables realmente disponibles y describir los segmentos como perfiles/proxies, no como RFM o CLV real sin datos transaccionales suficientes.
+7. Construir un despliegue funcional en Streamlit.
+
+---
+
+## 8. Estructura del repositorio
+
+```text
+customer-churn-prediction/
 ├── data/
 │   ├── raw/
-│   │   └── telco_customer_churn.csv      # Dataset inmutable original
+│   │   └── telco_customer_churn.csv
 │   └── processed/
-│       ├── train.csv                      # Partición de entrenamiento (80%)
-│       └── test.csv                       # Partición de prueba (20%)
+│       ├── train.csv
+│       ├── validation.csv
+│       └── test.csv
 ├── notebooks/
-│   ├── 01_eda_exploratorio.ipynb          # EDA ejecutado con gráficos e interpretaciones
-│   └── 02_preparacion_y_modelamiento.ipynb# Flujo de modelado, baselines y evaluación
+│   ├── 01_eda_exploratorio.ipynb
+│   └── 02_preparacion_y_modelamiento.ipynb
 ├── src/
 │   ├── __init__.py
-│   ├── config.py                          # Rutas, semillas (SEED=42) y costos de negocio
-│   ├── preprocessing.py                   # ColumnTransformer reproducible
-│   ├── evaluation.py                      # Métricas técnicas y matriz de costo económico
-│   └── train_models.py                    # Script de ejecución end-to-end
+│   ├── config.py
+│   ├── preprocessing.py
+│   ├── evaluation.py
+│   └── train_models.py
 ├── models/
-│   └── pipeline_tp1_logreg.joblib         # Artefacto serializado del pipeline preliminar
+│   └── pipeline_tp1_seleccionado.joblib
 ├── reports/
-│   ├── tabla_comparativa_modelos_tp1.csv  # Métricas cuantitativas consolidadas
-│   └── guion_y_diapositivas_tp1.md        # Estructura y guion para exposición de 10 min
-├── README.md                              # Documentación técnica principal
-└── requirements.txt                       # Dependencias reproducibles
+│   ├── comparacion_modelos_validacion_tp1.csv
+│   ├── evaluacion_final_test_tp1.csv
+│   └── guion_y_diapositivas_tp1.md
+├── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 9. Instrucciones para Reproducir el Proyecto
+## 9. Reproducción del proyecto
 
-### 9.1. Clonar el repositorio y configurar el entorno
+### 9.1 Clonar y entrar al repositorio
+
 ```bash
-# 1. Clonar o posicionarse en la carpeta del proyecto
-cd TP
-
-# 2. Crear entorno virtual (opcional pero recomendado)
-python -m venv venv
-# En Windows:
-venv\Scripts\activate
-# En Linux/Mac:
-source venv/bin/activate
-
-# 3. Instalar dependencias exactas
-pip install -r requirements.txt
+git clone https://github.com/joako-baneado/customer-churn-prediction.git
+cd customer-churn-prediction
 ```
 
-### 9.2. Ejecutar el pipeline completo de entrenamiento
+### 9.2 Crear un entorno virtual
+
+```bash
+python -m venv venv
+```
+
+PowerShell:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+CMD:
+
+```cmd
+venv\Scripts\activate.bat
+```
+
+Linux/macOS:
+
+```bash
+source venv/bin/activate
+```
+
+### 9.3 Instalar dependencias
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### 9.4 Ejecutar el pipeline
+
 ```bash
 python -m src.train_models
 ```
 
-### 9.3. Explorar los cuadernos Jupyter
-```bash
-jupyter notebook notebooks/01_eda_exploratorio.ipynb
-jupyter notebook notebooks/02_preparacion_y_modelamiento.ipynb
-```
-*(Los cuadernos ya se encuentran completamente ejecutados con todos los gráficos y tablas renderizados).*
+El script genera/actualiza:
+
+- `data/processed/train.csv`
+- `data/processed/validation.csv`
+- `data/processed/test.csv`
+- `reports/comparacion_modelos_validacion_tp1.csv`
+- `reports/evaluacion_final_test_tp1.csv`
+- `models/pipeline_tp1_seleccionado.joblib`
+
+### 9.5 Ejecutar notebooks
+
+Abrir en VS Code/Jupyter y ejecutar en orden:
+
+1. `notebooks/01_eda_exploratorio.ipynb`
+2. `notebooks/02_preparacion_y_modelamiento.ipynb`
+
+Los notebooks de entrega deben conservar los outputs, tablas y gráficos visibles.
+
+---
+
+## 10. Uso de IA generativa
+
+Se utilizó ChatGPT como apoyo para **revisión de estructura, depuración, organización del código y mejora de redacción/documentación**. El equipo ejecutó el código, verificó los resultados y mantiene la responsabilidad sobre las decisiones metodológicas, interpretaciones y conclusiones del proyecto.
