@@ -68,7 +68,9 @@ El diccionario completo se conserva en el informe y en el EDA.
 - Los 11 casos corresponden a clientes con `tenure = 0`.
 - Por regla lógica del problema, esos registros se representan con `TotalCharges = 0`.
 - Después de esta corrección no quedan faltantes en `TotalCharges`.
-- Se verificaron **0 duplicados completos**.
+- Se verificaron **0 duplicados completos** y **0 `customerID` repetidos**. Existen 22 filas idénticas a otra al excluir el identificador; se conservan porque corresponden a clientes distintos con el mismo perfil.
+- Las categorías no presentan variantes de escritura. `No internet service` (1,526 clientes) y `No phone service` (682) son redundantes con `InternetService` y `PhoneService`; se conservan en el TP1.
+- Ninguna variable numérica (`tenure`, `MonthlyCharges`, `TotalCharges`) tiene valores fuera de los límites IQR, por lo que no se recorta ni se transforma ninguna.
 - `customerID` se excluye del modelamiento por ser un identificador.
 - `SeniorCitizen` se trata como variable categórica binaria.
 
@@ -93,10 +95,10 @@ El `SimpleImputer(strategy="median")` se mantiene dentro del pipeline como respa
 ## 4. Hallazgos principales del EDA
 
 1. **Desbalance de clases:** 26.54% churn frente a 73.46% no churn.
-2. **Contrato:** la tasa observada de churn es mayor en `Month-to-month` que en contratos de uno y dos años.
-3. **Antigüedad:** se observa mayor concentración de churn entre clientes con menor `tenure`.
-4. **Fibra óptica y soporte técnico:** el grupo `Fiber optic` sin `TechSupport` presenta una tasa de churn elevada dentro del dataset.
-5. **Método de pago:** `Electronic check` presenta una tasa de churn mayor que otros métodos de pago.
+2. **Contrato:** la tasa de churn es de 42.7% en `Month-to-month`, 11.3% en contratos de un año y 2.8% en contratos de dos años.
+3. **Antigüedad:** la tasa de churn es de 54.3% entre 0 y 5 meses de `tenure`, 36.0% entre 6 y 12, 28.7% entre 13 y 24, 20.4% entre 25 y 48 y 9.5% entre 49 y 72.
+4. **Fibra óptica y soporte técnico:** dentro de `Fiber optic`, la tasa de churn es de 49.4% sin `TechSupport` y de 22.6% con `TechSupport`.
+5. **Método de pago:** `Electronic check` presenta 45.3% de churn, frente a 19.1% de `Mailed check`, 16.7% de transferencia bancaria automática y 15.2% de tarjeta de crédito automática.
 
 Estos resultados representan **asociaciones observadas en la muestra y no relaciones causales**.
 
@@ -137,6 +139,8 @@ Las transformaciones estadísticas se encapsulan en el `Pipeline`. La imputació
 
 **Criterio principal de selección:** PR-AUC en Validation.  
 Random Forest queda como candidato preliminar con `PR-AUC = 0.6327`, frente a `0.6313` de Regresión Logística. La diferencia es **mínima**, por lo que no se interpreta como superioridad concluyente.
+
+En las métricas complementarias de Validation, la Regresión Logística obtiene mayor Recall (0.8143 frente a 0.7571) y mayor valor económico simulado (+$42,700 frente a +$31,400). La regla de selección por PR-AUC está definida en el código y se aplica de forma automática, por lo que se mantiene en el TP1; su coherencia con los criterios de utilidad del proyecto (sección 1.5) se revisará en el TF1.
 
 ### 6.2 Evaluación final en Test
 
@@ -183,6 +187,7 @@ Estos valores son supuestos de trabajo del grupo y requieren análisis de sensib
 - Umbral de decisión fijo en 0.50.
 - Hiperparámetros preliminares, sin búsqueda sistemática.
 - Aún no se mide estabilidad con validación cruzada.
+- La selección entre modelos depende de una diferencia de 0.0014 en PR-AUC y es sensible a la versión de scikit-learn: con la versión 1.9.1 el Random Forest produce otros valores y el script selecciona la Regresión Logística. Por ello `requirements.txt` fija versiones exactas.
 - La meta interna de Recall no se sostiene en el Test final.
 - Los costos económicos son supuestos del grupo.
 - El baseline heurístico fue inspirado por el EDA; en una evaluación completamente ciega, las reglas de dominio deberían fijarse antes de observar un holdout reservado.
@@ -270,6 +275,8 @@ source venv/bin/activate
 ```bash
 python -m pip install -r requirements.txt
 ```
+
+`requirements.txt` fija versiones exactas (entorno verificado: Python 3.13, scikit-learn 1.8.0). Con esas versiones el pipeline reproduce las cifras de este README.
 
 ### 9.4 Ejecutar el pipeline
 

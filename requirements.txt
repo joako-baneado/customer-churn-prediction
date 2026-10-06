@@ -1,10 +1,15 @@
 # Dependencias del Proyecto Integrador - CC209 Data Mining Tools
-# Python 3.10+
-numpy>=1.24.0
-pandas>=2.0.0
-scikit-learn>=1.3.0
-matplotlib>=3.7.0
-seaborn>=0.12.0
-joblib>=1.3.0
-nbformat>=5.9.0
-ipykernel>=6.25.0
+# Entorno verificado: Python 3.13
+#
+# Las versiones están fijadas porque el resultado depende de ellas:
+# con scikit-learn 1.6 a 1.8 el pipeline reproduce las cifras del README
+# (Random Forest seleccionado); con scikit-learn 1.9.1 el Random Forest
+# produce otros valores y el script selecciona la Regresión Logística.
+numpy==2.5.3
+pandas==3.0.5
+scikit-learn==1.8.0
+matplotlib==3.11.2
+seaborn==0.13.2
+joblib==1.6.0
+nbformat==5.11.1
+ipykernel==7.4.0

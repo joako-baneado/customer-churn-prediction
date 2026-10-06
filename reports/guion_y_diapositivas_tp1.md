@@ -1,115 +1,128 @@
 # Estructura de Diapositivas y Guion de Exposición Oral (TP1)
-**Proyecto:** Sistema Predictivo de Fuga de Clientes con Segmentación de Valor (Customer Churn)  
+
+**Proyecto:** Predicción de Fuga de Clientes (Customer Churn)  
 **Curso:** Data Mining Tools (CC209) — UPC  
-**Tiempo Límite:** 10 minutos de exposición + 5 minutos de preguntas  
-**Integrantes:** 2 a 4 estudiantes (incluye guía de reparto de turnos)  
+**Tiempo límite:** 10 minutos de exposición + 5 minutos de preguntas  
+**Participación:** todos los integrantes deben intervenir
+
+Este guion sigue, página por página, la presentación `reports/TP1_Customer_Churn_Data_Mining_Tools.pdf`. Todas las cifras provienen de `README.md`, de los cuadernos ejecutados y de los archivos `reports/comparacion_modelos_validacion_tp1.csv` y `reports/evaluacion_final_test_tp1.csv`.
 
 ---
 
-## Esquema General de Tiempo (10 minutos)
-* **Minutos 0:00 – 2:00:** Diapositivas 1 y 2 $\rightarrow$ Problema, contexto de negocio y unidad de análisis.
-* **Minutos 2:00 – 4:30:** Diapositivas 3, 4 y 5 $\rightarrow$ Dataset, hallazgos críticos del EDA y calidad de datos.
-* **Minutos 4:30 – 7:00:** Diapositivas 6 y 7 $\rightarrow$ Flujo anti-leakage, ColumnTransformer y Baselines.
-* **Minutos 7:00 – 9:00:** Diapositivas 8 y 9 $\rightarrow$ Modelos preliminares, matriz de costos económicos.
-* **Minutos 9:00 – 10:00:** Diapositiva 10 $\rightarrow$ Estado actual, limitaciones y plan hacia el TF1.
+## Esquema general de tiempo (10 minutos)
+
+| Minutos | Página del PDF | Contenido |
+| --- | --- | --- |
+| 0:00 – 0:30 | 1 | Portada |
+| 0:30 – 1:30 | 2 | Problema y criterio de éxito |
+| 1:30 – 2:30 | 3 | Dataset y calidad de datos |
+| 2:30 – 4:00 | 4 | EDA orientado a preguntas |
+| 4:00 – 5:15 | 5 | Flujo reproducible y prevención de leakage |
+| 5:15 – 6:30 | 6 | Selección del modelo en Validation |
+| 6:30 – 8:00 | 7 | Evaluación final en Test |
+| 8:00 – 9:00 | 8 | Lectura crítica del TP1 |
+| 9:00 – 10:00 | 9 | Plan hacia el Trabajo Final |
+| Preguntas | 10 | Apéndice de resultados reproducibles |
 
 ---
 
-## Diapositiva 1: Portada y Definición del Problema (1 min)
-* **Título:** Sistema Predictivo de Churn y Decisión de Retención de Clientes.
-* **Subtítulo:** Proyecto Integrador de Data Science – Trabajo Parcial (TP1).
-* **Contenido Visual:**
-  * Contexto: Fuga del 26.5% mensual en servicios de telecomunicaciones.
-  * Costo: Adquirir un nuevo cliente cuesta hasta 7 veces más que retenerlo.
-  * Unidad de Análisis: **Un contrato / cliente individual activo por ciclo mensual**.
-  * Pregunta Central: *¿Cuál es la probabilidad de que un cliente cancele su servicio en el próximo ciclo de facturación y qué factores explican la decisión para priorizar intervenciones rentables?*
-* **Guion Oral:**
-  > *"Buenos días profesor y compañeros. Nuestro proyecto aborda la problemática de la deserción de clientes en servicios por suscripción. En esta industria, perder clientes no solo significa perder facturación recurrente, sino que adquirir un cliente nuevo cuesta hasta siete veces más. Nuestra unidad de análisis es un contrato mensual activo. Nuestro objetivo no es simplemente predecir por predecir, sino proveer una herramienta que permita identificar oportunamente a los clientes en riesgo para desplegar acciones comerciales con retorno de inversión positivo."*
+## Página 1: Portada (0.5 min)
+
+> *"Buenos días. Nuestro proyecto busca identificar a los clientes con mayor riesgo de cancelar su servicio, para priorizar las acciones de retención en lugar de aplicarlas sobre toda la cartera. Lo que presentamos es un primer corte, no un producto concluido."*
 
 ---
 
-## Diapositiva 2: Dataset, Calidad y Limitaciones (1 min)
-* **Contenido Visual:**
-  * Dataset: *IBM Telco Customer Churn* (7,043 observaciones, 21 atributos).
-  * Variable objetivo: `Churn` (Binaria: 26.5% Fuga / 73.5% Retención).
-  * **Hallazgo Crítico de Calidad:** 11 clientes con espacios en blanco `' '` en `TotalCharges`.
-  * **Explicación fundamentada:** Corresponden a `tenure = 0` (clientes nuevos sin facturación completada). Solución: Imputación controlada de \$0 y conversión a numérico.
-* **Guion Oral:**
-  > *"Analizamos una base de datos con 7,043 clientes. En la etapa de diagnóstico detectamos un problema de calidad clave: 11 registros con espacios en blanco en la variable TotalCharges, lo que provocaba que se leyera como texto. Al investigar a fondo, demostramos que todos tenían antigüedad cero; eran clientes recién dados de alta que aún no habían cerrado su primer ciclo. Por ello, se justificó imputar cero y tipificar la variable a numérico, reconociendo la lógica del negocio en lugar de eliminar filas arbitrariamente."*
+## Página 2: Problema y criterio de éxito (1 min)
+
+* **En pantalla:** pregunta del proyecto, unidad de análisis, 26.54 % de churn y los tres criterios del grupo (PR-AUC > 0.60, Recall ≥ 0.75, valor simulado > 0).
+
+> *"Es un problema de clasificación binaria supervisada sobre clientes individuales. El 26.5 % canceló el servicio, de modo que un modelo que siempre prediga que nadie se va acierta el 73.5 % de las veces y no sirve. Por eso, antes de modelar, fijamos tres criterios para juzgar si el resultado es útil. Son metas internas nuestras, y más adelante veremos que una de ellas no se cumple."*
 
 ---
 
-## Diapositiva 3: EDA – Hallazgos Críticos de Negocio (1.5 min)
-* **Contenido Visual:** 3 Gráficos clave del Cuaderno 01:
-  1. **Tipo de Contrato:** Mes a mes (42.7% fuga) vs. 2 años (2.8% fuga).
-  2. **Curva de Antigüedad (*Tenure*):** Concentración masiva de bajas en los primeros 5 meses.
-  3. **Interacción Internet + Soporte:** Clientes con Fibra Óptica sin Soporte Técnico fugan un 49.4%.
-* **Guion Oral:**
-  > *"En el EDA distinguimos con claridad entre lo que los datos muestran y lo que interpretamos como equipo. Los datos muestran que el 42.7% de quienes tienen contrato mes a mes cancelan, frente a menos del 3% en contratos bianuales. Además, la curva de deserción se concentra en los primeros cinco meses de vida del cliente. Interpretamos esto como una fricción inicial de onboarding: si un cliente supera el primer semestre, su retención aumenta drásticamente. Asimismo, detectamos que la fibra óptica sin soporte técnico dispara la deserción al 50%, lo que nos da una palanca comercial inmediata: bonificar soporte técnico en planes de alta gama."*
+## Página 3: Dataset y calidad de datos (1 min)
+
+* **En pantalla:** 7,043 clientes, 21 variables, 0 duplicados completos; 11 vacíos en `TotalCharges` con `tenure = 0`; procedencia y limitación de corte transversal.
+* **Respaldo en el Cuaderno 01 (no está en la lámina):** 0 `customerID` repetidos; 22 perfiles idénticos al excluir el identificador, que se conservan; sin valores fuera de los límites IQR; `No internet service` y `No phone service` son categorías redundantes, no errores.
+
+> *"Trabajamos con 7,043 clientes y 21 variables. Cada decisión de preparación tiene su razón: los 11 vacíos de TotalCharges corresponden a clientes con antigüedad cero, que aún no cierran su primer ciclo de facturación; por eso les asignamos cero y no la mediana, que habría falseado su situación. No encontramos duplicados ni valores extremos, de modo que no eliminamos filas ni recortamos variables. La limitación principal es que el dataset es un corte transversal."*
 
 ---
 
-## Diapositiva 4: Metodología Anti-Leakage y Pipeline (1.5 min)
-* **Contenido Visual:**
-  * Diagrama de flujo: `Carga` $\rightarrow$ `Split Estratificado (80/20)` $\rightarrow$ `ColumnTransformer` $\rightarrow$ `Modelos`.
-  * Numéricas: `SimpleImputer(mediana)` + `StandardScaler`.
-  * Categóricas: `SimpleImputer(moda)` + `OneHotEncoder(drop='first')`.
-  * Regla estricta: Transformadores ajustados (`fit`) **solo** sobre Train.
-* **Guion Oral:**
-  > *"Para cumplir con el rigor técnico del curso y evitar data leakage, realizamos una partición estratificada del 80% entrenamiento y 20% prueba antes de calcular cualquier estadística. La estratificación fue indispensable para preservar la prevalencia de 26.5% en ambos conjuntos. Implementamos un ColumnTransformer modular donde todas las transformaciones —imputaciones, estandarización y One-Hot Encoding— se ajustan exclusivamente en el conjunto de entrenamiento, transformando la prueba sin contaminar el flujo."*
+## Página 4: EDA orientado a preguntas (1.5 min)
+
+* **En pantalla:** churn por contrato (42.7 %, 11.3 %, 2.8 %); fibra óptica sin soporte técnico 49.4 %; cheque electrónico 45.3 %; mayor riesgo al inicio.
+* **Respaldo en el Cuaderno 01:** fibra óptica con soporte técnico 22.6 %; por tramos de antigüedad, 54.3 % (0 a 5 meses), 36.0 % (6 a 12), 28.7 % (13 a 24), 20.4 % (25 a 48) y 9.5 % (49 a 72); otros métodos de pago entre 15.2 % y 19.1 %.
+
+> *"Distinguimos lo que los datos muestran de lo que interpretamos. Los datos muestran que el 42.7 % de los clientes con contrato mensual se va, frente al 2.8 % con contrato de dos años, y que más de la mitad de los clientes con menos de seis meses cancela. Interpretamos que el compromiso contractual actúa como barrera de salida y que existe una fricción en los primeros meses; de ahí sale nuestro baseline heurístico. En fibra óptica, la fuga es de 49.4 % sin soporte técnico y de 22.6 % con soporte. Son asociaciones: con estos datos no podemos afirmar que dar soporte reduzca la fuga."*
 
 ---
 
-## Diapositiva 5: Baselines vs. Modelos Preliminares (1.5 min)
-* **Contenido Visual:**
-  * Baseline 1 (Dummy): Predice siempre no fuga $\rightarrow$ Accuracy 73.5%, pero Recall 0%.
-  * Baseline 2 (Heurístico): Si contrato = mes-a-mes y antigüedad $\le 6$ meses $\rightarrow$ Fuga $\rightarrow$ Recall 45.5%, PR-AUC 0.410.
-  * Modelo 1: Regresión Logística (`class_weight='balanced'`) $\rightarrow$ Recall 78.3%, PR-AUC 0.633.
-  * Modelo 2: Random Forest (`class_weight='balanced'`) $\rightarrow$ Recall 78.9%, PR-AUC 0.655.
-* **Guion Oral:**
-  > *"Para responder con rigor si el Machine Learning aporta valor frente a soluciones simples, construimos dos baselines. El baseline trivial muestra la falacia del Accuracy: tiene 73.5% de exactitud aparente, pero no detecta a ningún desertor. Nuestro baseline heurístico de negocio captura el 45% de fugas. En contraste, nuestros modelos con ponderación balanceada logran capturar casi el 79% de los clientes en fuga y elevan el PR-AUC a 0.655 en Random Forest, superando con creces las referencias simples."*
+## Página 5: Flujo reproducible y prevención de leakage (1.25 min)
+
+* **En pantalla:** Train 4,930 (70 %), Validation 1,056 (15 %), Test 1,057 (15 %); pipeline de preprocesamiento; "Validation decide; Test no participa en la selección".
+
+> *"Separamos los datos en tres conjuntos estratificados antes de ajustar cualquier transformación. Validation sirve para elegir entre modelos y Test se reserva para una única evaluación final. La imputación, el escalado y la codificación viven dentro del Pipeline, de modo que sus estadísticas se aprenden solo con los datos de entrenamiento. Todo se reproduce con un comando, python -m src.train_models, con las versiones fijadas en requirements.txt."*
 
 ---
 
-## Diapositiva 6: Análisis de Matriz de Confusión y Retorno Económico (1.5 min)
-* **Contenido Visual:**
-  * Tabla económica y matrices de confusión:
-    * Costo Falso Negativo (Cliente perdido): -\$500.
-    * Costo Falso Positivo (Bono innecesario): -\$50.
-    * Beneficio Verdadero Positivo (Cliente retenido): +\$350.
-  * Comparativa de Utilidad Neta en muestra de prueba:
-    * Dummy: **-\$187,000 USD**
-    * Baseline Heurístico: **-\$48,550 USD**
-    * Random Forest: **+\$50,500 USD**
-* **Guion Oral:**
-  > *"Más allá de reportar métricas técnicas, modelamos el impacto financiero del error. Un falso negativo cuesta 500 dólares en valor de vida perdido, mientras que un falso positivo cuesta solo 50 dólares en incentivos. Gracias a este enfoque, mientras el baseline trivial causaría una pérdida catastrófica de 187 mil dólares en la muestra de prueba, el modelo de Random Forest genera un valor económico neto positivo de más de 50 mil dólares, validando la utilidad real de la solución."*
+## Página 6: Selección del modelo en Validation (1.25 min)
+
+* **En pantalla:** Regresión Logística PR-AUC 0.6313 y Recall 0.8143; Random Forest PR-AUC 0.6327 y Recall 0.7571; utilidad simulada +$42,700 y +$31,400.
+
+> *"Comparamos una alternativa lineal y un ensamble de árboles. Nuestra regla, definida en el código, es elegir automáticamente por PR-AUC en Validation, y bajo esa regla queda el Random Forest por una diferencia de 0.0014. Lo decimos con franqueza: la Regresión Logística tiene mejor recall y mejor valor simulado, así que no afirmamos que el Random Forest sea superior. Es un candidato preliminar."*
 
 ---
 
-## Diapositiva 7: Estado del Proyecto y Plan hacia el TF1 (1 min)
-* **Contenido Visual:**
-  * **Limitaciones actuales reconocidas:** Umbral fijo de 0.50, hiperparámetros estándar, sin segmentación por valor de cliente.
-  * **Hoja de ruta al TF1 (Semana 15):**
-    1. Optimización bayesiana con **Optuna** y tracking con **MLflow**.
-    2. Segmentación no supervisada con **Clustering (K-Means)** por valor de cliente.
-    3. Interpretabilidad local y global con **SHAP**.
-    4. Calibración de umbral óptimo y análisis exhaustivo de falsos positivos/negativos.
-    5. Despliegue de aplicación interactiva en **Streamlit**.
-* **Guion Oral:**
-  > *"Para concluir, reconocemos que el TP1 es nuestro primer corte. Identificamos como limitaciones el uso de hiperparámetros estándar y un umbral fijo en 0.50. De cara al Trabajo Final, implementaremos experimentación sistemática con Optuna y MLflow, aplicaremos Clustering para segmentar clientes por valor de vida, usaremos SHAP para explicar a los asesores las causas individuales del riesgo, y desplegaremos la solución en una aplicación web interactiva con Streamlit. Muchas gracias, quedamos atentos a sus preguntas."*
+## Página 7: Evaluación final en Test (1.5 min)
+
+* **En pantalla:** Accuracy 0.7833, Precision 0.5756, Recall 0.7046, ROC-AUC 0.8400, PR-AUC 0.6698; matriz TN 630, FP 146, FN 83, TP 198; valor simulado −$140,500 (Dummy), −$40,550 (heurístico) y +$20,500 (Random Forest).
+
+> *"¿El modelo mejora frente a una solución simple? Sí. El baseline trivial no detecta ninguna fuga y la regla heurística detecta el 44 %; el Random Forest detecta el 70 %, 198 de 281, con un PR-AUC de 0.67. Bajo nuestros supuestos de costo, se pasa de pérdidas a una utilidad simulada de 20,500 dólares. Dos advertencias: los montos son supuestos nuestros, no datos de la empresa, y la meta de recall de 0.75 no se cumple en Test. Lo reportamos como limitación y no volvemos a elegir modelo mirando Test."*
 
 ---
 
-## Preguntas Frecuentes del Docente y Cómo Responderlas (Q&A)
+## Página 8: Lectura crítica del TP1 (1 min)
 
-1. **¿Por qué descartaron el Accuracy si supera el 73%?**
-   * *Respuesta:* *"Porque la clase minoritaria representa el 26.5% de la base. Un modelo trivial que prediga que nadie se va obtiene 73.5% de Accuracy pero un Recall de 0%, lo que significaría perder al 100% de los clientes en riesgo con un impacto financiero desastroso. Por eso priorizamos PR-AUC, Recall de la clase 1 y el valor económico neto."*
+* **En pantalla:** lo que ya funciona, limitaciones y decisión del TP1.
 
-2. **¿Cómo garantizaron que no haya Data Leakage en el preprocesamiento?**
-   * *Respuesta:* *"El train_test_split estratificado se realizó de forma previa a cualquier cálculo. El ColumnTransformer calcula las medianas numéricas, la escala y los vocabularios del OneHotEncoder exclusivamente en el conjunto de entrenamiento mediante el método fit(), y luego simplemente transforma el conjunto de prueba."*
+> *"Lo que ya funciona: un flujo reproducible que supera a los baselines y deja a Test fuera de la selección. Lo que no está resuelto: el recall queda bajo la meta, la diferencia entre modelos es mínima, no hay validación cruzada ni búsqueda de hiperparámetros, y los costos son supuestos. Además comprobamos que la selección es sensible a la versión de scikit-learn, lo que confirma que la ventaja del Random Forest es frágil. Por eso lo mantenemos como candidato preliminar."*
 
-3. **¿Por qué consideraron dos baselines?**
-   * *Respuesta:* *"El Dummy nos permite contrastar contra el azar o la prevalencia, mientras que el baseline heurístico basado en contratos mes a mes y baja antigüedad demuestra si las heurísticas tradicionales de negocio son suficientes o si el Machine Learning aporta un beneficio incremental mensurable."*
+---
 
-4. **¿Por qué imputaron cero en los espacios de `TotalCharges` en lugar de la mediana?**
-   * *Respuesta:* *"Porque al cruzar esos 11 registros demostramos que todos tenían antigüedad cero (tenure = 0). Imputarles la mediana o media histórica de clientes consolidados habría falseado la realidad de un cliente nuevo que aún no ha generado cargos acumulados."*
+## Página 9: Plan hacia el Trabajo Final (1 min)
+
+* **En pantalla:** estabilidad, optimización, interpretabilidad y producto.
+
+> *"Cada pendiente tiene una actividad que lo atiende: la validación cruzada medirá si la ventaja entre modelos es estable; el ajuste de umbral atacará el recall que hoy no alcanza la meta; la interpretabilidad y el análisis de errores explicarán en qué casos falla el modelo; y el despliegue en Streamlit lo hará utilizable fuera del cuaderno. Declaramos el uso de IA generativa como apoyo; las decisiones y conclusiones son del equipo. Quedamos atentos a sus preguntas y podemos abrir el repositorio para verificar cualquier cifra."*
+
+---
+
+## Página 10: Apéndice
+
+Tabla de referencia con los valores de Validation y Test. Usarla solo si el docente pide una cifra exacta.
+
+---
+
+## Preguntas probables del docente y cómo responderlas
+
+1. **¿Por qué descartaron Accuracy si supera el 73 %?**
+   * *"Porque la clase de interés es el 26.5 % de la base. El baseline trivial obtiene 73.4 % de Accuracy en Test con un recall de 0 %. Por eso priorizamos PR-AUC y lo complementamos con recall, precision y la simulación económica."*
+
+2. **¿Cómo evitaron el data leakage?**
+   * *"La partición en Train, Validation y Test se hace antes de ajustar cualquier transformación. Las medianas, la escala y las categorías del OneHotEncoder se aprenden dentro del Pipeline solo con los datos de entrenamiento. La única corrección previa al split es asignar 0 a TotalCharges cuando tenure es 0, que es una regla lógica y no una estadística estimada de la muestra."*
+
+3. **¿Por qué eligieron Random Forest si la Regresión Logística tiene mejor recall y mejor valor económico en Validation?**
+   * *"Porque la regla de selección, PR-AUC en Validation, está definida en el código y se aplica de forma automática; no quisimos cambiarla después de ver los resultados. La diferencia es de 0.0014, así que no la consideramos concluyente. Reconocemos que esa regla no coincide del todo con nuestros criterios de utilidad, y en el TF1 la revisaremos con validación cruzada."*
+
+4. **La meta de recall era 0.75 y obtuvieron 0.70. ¿Qué harán?**
+   * *"No modificaremos el modelo mirando Test. En el TF1 ajustaremos el umbral de decisión, hoy fijo en 0.50, usando validación cruzada sobre los datos de entrenamiento."*
+
+5. **¿Por qué imputaron 0 en `TotalCharges` y no la mediana?**
+   * *"Porque los 11 registros tienen antigüedad cero: son clientes que aún no acumulan facturación. La mediana de clientes consolidados no representaría su situación."*
+
+6. **¿El resultado es reproducible?**
+   * *"Sí, con las versiones fijadas en requirements.txt. Lo señalamos porque comprobamos que con scikit-learn 1.9.1 el Random Forest arroja otros valores y la selección cambia, lo que confirma que la ventaja entre modelos es frágil."*
+
+7. **¿De dónde salen los costos de la simulación?**
+   * *"Son supuestos de trabajo del grupo, no datos de la empresa. La simulación asume además que todo cliente en riesgo detectado es retenido. En el TF1 haremos un análisis de sensibilidad."*
