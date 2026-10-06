@@ -15,7 +15,13 @@ REPORTS_DIR = BASE_DIR / "reports"
 
 # Semilla de reproducibilidad
 RANDOM_STATE = 42
-TEST_SIZE = 0.20
+
+# Estrategia de partición del TP1:
+# 70% entrenamiento, 15% validación y 15% prueba final.
+# Validation se utiliza para comparar modelos y tomar decisiones.
+# Test se reserva hasta después de seleccionar el modelo preliminar.
+VALIDATION_SIZE = 0.15
+TEST_SIZE = 0.15
 
 # Definición de variables del problema
 TARGET_COLUMN = "Churn"
