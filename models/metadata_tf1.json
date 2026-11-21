@@ -1,0 +1,250 @@
+{
+  "winner_name": "Stacking Heterogéneo (LR+LGBM+XGB)",
+  "winner_family": "stacking",
+  "calibration_method": "none",
+  "recommended_policy": "global",
+  "global_threshold": 0.2,
+  "unconstrained_bayes_threshold": 0.05,
+  "operational_precision_floor": 0.5,
+  "dynamic_thresholds_by_cluster": {
+    "0": {
+      "label": "Bajo Valor / Entrada",
+      "threshold": 0.3,
+      "threshold_floor": 0.3,
+      "mean_monthly_charges": 23.06,
+      "value_weight_factor": 0.355,
+      "oof_base_utility": -23550.0,
+      "n_dev": 1539
+    },
+    "1": {
+      "label": "Valor Medio / Estándar",
+      "threshold": 0.22,
+      "threshold_floor": 0.22,
+      "mean_monthly_charges": 70.11,
+      "value_weight_factor": 1.078,
+      "oof_base_utility": 254000.0,
+      "n_dev": 1888
+    },
+    "2": {
+      "label": "Alto Valor / Consolidado",
+      "threshold": 0.21,
+      "threshold_floor": 0.18,
+      "mean_monthly_charges": 86.53,
+      "value_weight_factor": 1.331,
+      "oof_base_utility": 16500.0,
+      "n_dev": 2559
+    }
+  },
+  "action_matrix_rules": {
+    "Alto Riesgo|2": {
+      "cuadrante": "Alto Riesgo + Alto Valor",
+      "prioridad": "P1 - Crítica",
+      "accion": "Retención VIP proactiva inmediata: llamada ejecutiva personalizada, revisión técnica prioritaria y oferta de fidelización anual."
+    },
+    "Alto Riesgo|1": {
+      "cuadrante": "Alto Riesgo + Valor Medio",
+      "prioridad": "P2 - Alta",
+      "accion": "Campaña multicanal dirigida: bono de soporte técnico gratuito o descuento temporal condicionado a migración contractual."
+    },
+    "Alto Riesgo|0": {
+      "cuadrante": "Alto Riesgo + Bajo Valor",
+      "prioridad": "P3 - Media",
+      "accion": "Retención digital automatizada de bajo costo: correo/SMS con beneficio leve o migración a débito automático."
+    },
+    "Bajo Riesgo|2": {
+      "cuadrante": "Bajo Riesgo + Alto Valor",
+      "prioridad": "Fidelización / Upsell",
+      "accion": "Cuidado de relación y venta cruzada (cross-selling) sin descuentos innecesarios."
+    },
+    "Bajo Riesgo|1": {
+      "cuadrante": "Bajo Riesgo + Valor Medio",
+      "prioridad": "Monitoreo",
+      "accion": "Seguimiento preventivo estándar y oferta gradual de paquetes adicionales."
+    },
+    "Bajo Riesgo|0": {
+      "cuadrante": "Bajo Riesgo + Bajo Valor",
+      "prioridad": "Estándar",
+      "accion": "Mantenimiento operativo estándar (sin intervención promocional)."
+    }
+  },
+  "economic_scenarios": {
+    "base": {
+      "label": "Escenario Base (Supuesto TP1)",
+      "cost_fn": 500.0,
+      "cost_fp": 50.0,
+      "benefit_tp": 350.0,
+      "benefit_tn": 0.0
+    },
+    "pesimista_30pct": {
+      "label": "Escenario Pesimista (30% efectividad de retención)",
+      "cost_fn": 500.0,
+      "cost_fp": 50.0,
+      "benefit_tp": 105.0,
+      "benefit_tn": 0.0
+    },
+    "agresivo_fp100": {
+      "label": "Escenario Agresivo (Costo intervención FP = $100)",
+      "cost_fn": 500.0,
+      "cost_fp": 100.0,
+      "benefit_tp": 350.0,
+      "benefit_tn": 0.0
+    }
+  },
+  "oof_thresholds_summary": [
+    {
+      "Modelo": "OOF Umbral Fijo 0.50",
+      "Accuracy": 0.8073838957567658,
+      "Precision (Clase 1)": 0.6651480637813212,
+      "Recall (Clase 1)": 0.5516372795969773,
+      "Value-Weighted Recall": 0.5835888424513427,
+      "F1-Score": 0.6030981067125646,
+      "ROC-AUC": 0.8505595055228905,
+      "PR-AUC": 0.6667869875955251,
+      "Brier Score": 0.13331512935840298,
+      "Log-Loss": 0.41311002167621225,
+      "TN": 3957,
+      "FP": 441,
+      "FN": 712,
+      "TP": 876,
+      "Valor Económico Neto ($)": -71450.0
+    },
+    {
+      "Modelo": "OOF Umbral Global Operativo (0.20)",
+      "Accuracy": 0.7363848980955563,
+      "Precision (Clase 1)": 0.5018698578908003,
+      "Recall (Clase 1)": 0.845088161209068,
+      "Value-Weighted Recall": 0.8603253669340416,
+      "F1-Score": 0.6297512904739558,
+      "ROC-AUC": 0.8505595055228905,
+      "PR-AUC": 0.6667869875955251,
+      "Brier Score": 0.13331512935840298,
+      "Log-Loss": 0.41311002167621225,
+      "TN": 3066,
+      "FP": 1332,
+      "FN": 246,
+      "TP": 1342,
+      "Valor Económico Neto ($)": 280100.0
+    },
+    {
+      "Modelo": "OOF Umbrales Dinámicos por Cluster",
+      "Accuracy": 0.751252923488139,
+      "Precision (Clase 1)": 0.5198715375351265,
+      "Recall (Clase 1)": 0.8154911838790933,
+      "Value-Weighted Recall": 0.845983413456291,
+      "F1-Score": 0.6349595489090464,
+      "ROC-AUC": 0.8505595055228905,
+      "PR-AUC": 0.6667869875955251,
+      "Brier Score": 0.13331512935840298,
+      "Log-Loss": 0.41311002167621225,
+      "TN": 3202,
+      "FP": 1196,
+      "FN": 293,
+      "TP": 1295,
+      "Valor Económico Neto ($)": 246950.0
+    }
+  ],
+  "test_metrics_summary": [
+    {
+      "Modelo": "Baseline Trivial (Dummy)",
+      "Accuracy": 0.7341532639545885,
+      "Precision (Clase 1)": 0.0,
+      "Recall (Clase 1)": 0.0,
+      "Value-Weighted Recall": 0.0,
+      "F1-Score": 0.0,
+      "ROC-AUC": 0.5,
+      "PR-AUC": 0.26584673604541154,
+      "Brier Score": 0.26584668287607444,
+      "Log-Loss": 4.284943193490343,
+      "TN": 776,
+      "FP": 0,
+      "FN": 281,
+      "TP": 0,
+      "Valor Económico Neto ($)": -140500.0
+    },
+    {
+      "Modelo": "Baseline Heurístico (Mes-a-Mes & Tenure <= 6)",
+      "Accuracy": 0.7634815515610217,
+      "Precision (Clase 1)": 0.5720930232558139,
+      "Recall (Clase 1)": 0.4377224199288256,
+      "Value-Weighted Recall": 0.3729001485846995,
+      "F1-Score": 0.4959677419354839,
+      "ROC-AUC": 0.6595828594489489,
+      "PR-AUC": 0.399897601977367,
+      "Brier Score": 0.2365184011352986,
+      "Log-Loss": 3.812227051549678,
+      "TN": 684,
+      "FP": 92,
+      "FN": 158,
+      "TP": 123,
+      "Valor Económico Neto ($)": -40550.0
+    },
+    {
+      "Modelo": "TP1: Random Forest (depth=10, umbral 0.50)",
+      "Accuracy": 0.783349101229896,
+      "Precision (Clase 1)": 0.5755813953488372,
+      "Recall (Clase 1)": 0.7046263345195729,
+      "Value-Weighted Recall": 0.7410680617812683,
+      "F1-Score": 0.6336,
+      "ROC-AUC": 0.839963128737572,
+      "PR-AUC": 0.6697891297946078,
+      "Brier Score": 0.1476422301434,
+      "Log-Loss": 0.447200894581178,
+      "TN": 630,
+      "FP": 146,
+      "FN": 83,
+      "TP": 198,
+      "Valor Económico Neto ($)": 20500.0
+    },
+    {
+      "Modelo": "TF1: Stacking Heterogéneo (LR+LGBM+XGB) (umbral 0.50)",
+      "Accuracy": 0.8032166508987701,
+      "Precision (Clase 1)": 0.6713615023474179,
+      "Recall (Clase 1)": 0.5088967971530249,
+      "Value-Weighted Recall": 0.5494961854936383,
+      "F1-Score": 0.5789473684210527,
+      "ROC-AUC": 0.8442556040650108,
+      "PR-AUC": 0.671912012481665,
+      "Brier Score": 0.1362520740054786,
+      "Log-Loss": 0.4218683312904395,
+      "TN": 706,
+      "FP": 70,
+      "FN": 138,
+      "TP": 143,
+      "Valor Económico Neto ($)": -22450.0
+    },
+    {
+      "Modelo": "TF1: Stacking Heterogéneo (LR+LGBM+XGB) (umbral global 0.20)",
+      "Accuracy": 0.7284768211920529,
+      "Precision (Clase 1)": 0.4935064935064935,
+      "Recall (Clase 1)": 0.8113879003558719,
+      "Value-Weighted Recall": 0.8412466131428786,
+      "F1-Score": 0.6137281292059219,
+      "ROC-AUC": 0.8442556040650108,
+      "PR-AUC": 0.671912012481665,
+      "Brier Score": 0.1362520740054786,
+      "Log-Loss": 0.4218683312904395,
+      "TN": 542,
+      "FP": 234,
+      "FN": 53,
+      "TP": 228,
+      "Valor Económico Neto ($)": 41600.0
+    },
+    {
+      "Modelo": "TF1: Stacking Heterogéneo (LR+LGBM+XGB) (umbrales dinámicos por cluster)",
+      "Accuracy": 0.7417218543046358,
+      "Precision (Clase 1)": 0.509478672985782,
+      "Recall (Clase 1)": 0.7651245551601423,
+      "Value-Weighted Recall": 0.8198479191899011,
+      "F1-Score": 0.6116642958748222,
+      "ROC-AUC": 0.8442556040650108,
+      "PR-AUC": 0.671912012481665,
+      "Brier Score": 0.1362520740054786,
+      "Log-Loss": 0.4218683312904395,
+      "TN": 569,
+      "FP": 207,
+      "FN": 66,
+      "TP": 215,
+      "Valor Económico Neto ($)": 31900.0
+    }
+  ]
+}

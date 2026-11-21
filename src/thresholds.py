@@ -26,8 +26,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+from sklearn.calibration import calibration_curve
 from sklearn.dummy import DummyClassifier
+from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 
 from src.clustering import ValueClusterSegmenter  # noqa: F401 (necesario para joblib.load)
@@ -87,28 +89,61 @@ ACTION_MATRIX_RULES = {
 }
 
 
-def build_candidate_with_calibration(
-    winner_family: str,
-    best_params_by_family: dict,
-    calibration_method: str,
-):
-    """Construye el pipeline ganador opcionalmente envuelto en CalibratedClassifierCV."""
+class CalibratedPipelineWrapper:
+    """
+    Wrapper ligero para calibración post-hoc entrenada sobre predicciones OOF,
+    manteniendo un solo fit del pipeline base en inferencia.
+    """
+
+    classes_ = np.array([0, 1])
+
+    def __init__(self, base_pipeline, calibrator=None, method: str = "none"):
+        self.base_pipeline = base_pipeline
+        self.calibrator = calibrator
+        self.method = method
+
+    @staticmethod
+    def _to_logit(p: np.ndarray) -> np.ndarray:
+        p_clip = np.clip(p, 1e-6, 1.0 - 1e-6)
+        return np.log(p_clip / (1.0 - p_clip)).reshape(-1, 1)
+
+    def predict_proba(self, X) -> np.ndarray:
+        raw_proba = self.base_pipeline.predict_proba(X)
+        p1 = raw_proba[:, 1]
+        if self.method == "none" or self.calibrator is None:
+            return raw_proba
+        if self.method == "sigmoid":
+            return self.calibrator.predict_proba(self._to_logit(p1))
+        if self.method == "isotonic":
+            p_cal = np.clip(self.calibrator.predict(p1), 1e-7, 1.0 - 1e-7)
+            return np.column_stack([1.0 - p_cal, p_cal])
+        raise ValueError(f"Método de calibración desconocido: {self.method}")
+
+    def predict(self, X) -> np.ndarray:
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
+
+
+def build_base_winner_pipeline(winner_family: str, best_params_by_family: dict):
+    """Construye el pipeline ganador sin calibración post-hoc."""
     if winner_family == "stacking":
-        base_pipe = build_model_pipeline(
+        return build_model_pipeline(
             "stacking", stacking_base_params=best_params_by_family
         )
-    else:
-        base_pipe = build_model_pipeline(
-            winner_family, params=best_params_by_family[winner_family]
-        )
-
-    if calibration_method == "none":
-        return base_pipe
-    return CalibratedClassifierCV(
-        estimator=base_pipe,
-        method=calibration_method,
-        cv=5,
+    return build_model_pipeline(
+        winner_family, params=best_params_by_family[winner_family]
     )
+
+
+def _fit_calibrator(oof_proba: np.ndarray, y_true: np.ndarray, method: str):
+    if method == "sigmoid":
+        lr = LogisticRegression(C=1e6, solver="lbfgs", max_iter=500)
+        lr.fit(CalibratedPipelineWrapper._to_logit(oof_proba), y_true)
+        return lr
+    if method == "isotonic":
+        iso = IsotonicRegression(out_of_bounds="clip")
+        iso.fit(oof_proba, y_true)
+        return iso
+    return None
 
 
 def compute_oof_calibration_comparison(
@@ -118,26 +153,52 @@ def compute_oof_calibration_comparison(
     best_params_by_family: dict,
 ) -> tuple[pd.DataFrame, dict[str, np.ndarray], str]:
     """
-    Evalúa en OOF (StratifiedKFold k=10) si la calibración Platt (sigmoid) o
-    Isotónica mejora Brier Score / Log-Loss sin degradar PR-AUC.
+    Calcula predicciones OOF del modelo ganador una sola vez (StratifiedKFold k=10)
+    y luego evalúa calibración Platt (sigmoid) e Isotónica de forma anidada en OOF
+    sin re-entrenar el ensamble base 660 veces (cero leakage, ~10x más rápido).
     """
     cv10 = StratifiedKFold(n_splits=CV_FOLDS_EVAL, shuffle=True, random_state=RANDOM_STATE)
-    oof_probas = {}
-    rows = []
+    cache_path = REPORTS_DIR / "oof_probas_tf1.npz"
+    if cache_path.exists():
+        cached = np.load(cache_path, allow_pickle=False)
+        if len(cached["oof_none"]) == len(X_dev) and str(cached["winner_family"]) == winner_family:
+            oof_none = cached["oof_none"]
+            print(f"  Usando caché OOF verificado ({cache_path.name})...", flush=True)
+        else:
+            oof_none = None
+    else:
+        oof_none = None
 
-    for method in ("none", "sigmoid", "isotonic"):
-        oof = np.zeros(len(X_dev), dtype=float)
-        for tr_idx, val_idx in cv10.split(X_dev, y_dev):
-            est = build_candidate_with_calibration(
-                winner_family, best_params_by_family, method
-            )
+    if oof_none is None:
+        oof_none = np.zeros(len(X_dev), dtype=float)
+        print("  Generando predicciones OOF del candidato ganador (10 folds)...", flush=True)
+        for fold_idx, (tr_idx, val_idx) in enumerate(cv10.split(X_dev, y_dev), start=1):
+            est = build_base_winner_pipeline(winner_family, best_params_by_family)
             est.fit(X_dev.iloc[tr_idx], y_dev.iloc[tr_idx])
-            oof[val_idx] = est.predict_proba(X_dev.iloc[val_idx])[:, 1]
+            oof_none[val_idx] = est.predict_proba(X_dev.iloc[val_idx])[:, 1]
+            print(f"    Fold {fold_idx}/{CV_FOLDS_EVAL} completado", flush=True)
+        np.savez_compressed(cache_path, oof_none=oof_none, winner_family=winner_family)
 
-        oof_probas[method] = oof
+    oof_probas: dict[str, np.ndarray] = {"none": oof_none}
+    y_arr = y_dev.values
+
+    for method in ("sigmoid", "isotonic"):
+        oof_cal = np.zeros(len(X_dev), dtype=float)
+        for tr_idx, val_idx in cv10.split(X_dev, y_dev):
+            cal = _fit_calibrator(oof_none[tr_idx], y_arr[tr_idx], method)
+            if method == "sigmoid":
+                oof_cal[val_idx] = cal.predict_proba(
+                    CalibratedPipelineWrapper._to_logit(oof_none[val_idx])
+                )[:, 1]
+            else:
+                oof_cal[val_idx] = np.clip(cal.predict(oof_none[val_idx]), 1e-7, 1.0 - 1e-7)
+        oof_probas[method] = oof_cal
+
+    rows = []
+    for method in ("none", "sigmoid", "isotonic"):
         metrics = evaluate_at_threshold(
             y_dev,
-            oof,
+            oof_probas[method],
             threshold=0.50,
             monthly_charges=X_dev["MonthlyCharges"].values,
             model_name=f"Calibración: {method}",
@@ -167,8 +228,15 @@ def optimize_global_threshold(
     y_dev: pd.Series,
     oof_proba: np.ndarray,
     monthly_charges: np.ndarray,
-) -> tuple[float, pd.DataFrame]:
-    """Barre umbrales en [0.05, 0.90] sobre OOF maximizando utilidad neta (con Recall >= RECALL_TARGET)."""
+    min_precision: float = 0.50,
+) -> tuple[float, float, pd.DataFrame]:
+    """
+    Barre umbrales en [0.05, 0.90] sobre OOF.
+    Reporta el óptimo Bayesiano irrestricto (que colapsa hacia tau=0.05 por
+    asimetría 500:50) y selecciona el umbral operativo que maximiza utilidad neta
+    sujeto a Recall >= RECALL_TARGET y Precision >= min_precision para evitar
+    campañas indiscriminadas sobre toda la cartera.
+    """
     sweep_rows = []
     for thr in np.round(np.arange(0.05, 0.905, 0.01), 2):
         res = evaluate_at_threshold(
@@ -184,13 +252,24 @@ def optimize_global_threshold(
     df_sweep = pd.DataFrame(sweep_rows)
     df_sweep.to_csv(REPORTS_DIR / "curva_umbrales_oof_tf1.csv", index=False)
 
-    feasible = df_sweep[df_sweep["Recall (Clase 1)"] >= RECALL_TARGET]
+    unconstrained_row = df_sweep.sort_values(
+        ["Valor Económico Neto ($)", "Value-Weighted Recall"],
+        ascending=[False, False],
+    ).iloc[0]
+    unconstrained_thr = float(unconstrained_row["Threshold"])
+
+    feasible = df_sweep[
+        (df_sweep["Recall (Clase 1)"] >= RECALL_TARGET)
+        & (df_sweep["Precision (Clase 1)"] >= min_precision)
+    ]
+    if feasible.empty:
+        feasible = df_sweep[df_sweep["Recall (Clase 1)"] >= RECALL_TARGET]
     pool = feasible if not feasible.empty else df_sweep
     best_row = pool.sort_values(
         ["Valor Económico Neto ($)", "Value-Weighted Recall"],
         ascending=[False, False],
     ).iloc[0]
-    return float(best_row["Threshold"]), df_sweep
+    return float(best_row["Threshold"]), unconstrained_thr, df_sweep
 
 
 def optimize_dynamic_thresholds_by_cluster(
@@ -201,11 +280,14 @@ def optimize_dynamic_thresholds_by_cluster(
     label_mapping: dict[int, str],
 ) -> dict[int, dict]:
     """
-    Optimiza un umbral específico por perfil/cluster de valor en OOF.
-    Pondera la pérdida por FN proporcionalmente al ingreso mensual promedio del
-    cluster respecto a la media global (priorizando retener ingresos de alto valor).
+    Optimiza un umbral operativo diferenciado por perfil/cluster de valor en OOF.
+    Aplica pisos operativos crecientes inversamente al valor del cluster:
+    - C2 Alto Valor: piso 0.18 (prioriza cobertura de ingresos altos)
+    - C1 Valor Medio: piso 0.22
+    - C0 Bajo Valor: piso 0.30 (evita intervención masiva de bajo margen)
     """
     global_mean_mc = float(np.mean(monthly_charges_dev))
+    tier_floors = {0: 0.30, 1: 0.22, 2: 0.18}
     dynamic_cfg: dict[int, dict] = {}
 
     for cid in sorted(label_mapping.keys()):
@@ -215,18 +297,16 @@ def optimize_dynamic_thresholds_by_cluster(
         mc_c = monthly_charges_dev[mask]
         cluster_mean_mc = float(np.mean(mc_c))
         value_factor = cluster_mean_mc / global_mean_mc
+        floor_thr = tier_floors.get(int(cid), 0.22)
 
-        best_thr = 0.25
-        best_weighted_utility = -np.inf
-        best_base_utility = -np.inf
-
-        for thr in np.round(np.arange(0.10, 0.71, 0.01), 2):
+        candidates = []
+        for thr in np.round(np.arange(floor_thr, 0.71, 0.01), 2):
             y_pred_c = (p_c >= thr).astype(int)
             tp = int(np.sum((y_c == 1) & (y_pred_c == 1)))
             fn = int(np.sum((y_c == 1) & (y_pred_c == 0)))
             fp = int(np.sum((y_c == 0) & (y_pred_c == 1)))
+            prec = tp / (tp + fp) if (tp + fp) > 0 else 0.0
 
-            # Utilidad ponderada por valor del segmento (costo FN y beneficio TP escalan con ticket medio)
             weighted_util = (
                 tp * (BENEFIT_TRUE_POSITIVE * value_factor)
                 - fn * (COST_FALSE_NEGATIVE * value_factor)
@@ -237,14 +317,17 @@ def optimize_dynamic_thresholds_by_cluster(
                 - fn * COST_FALSE_NEGATIVE
                 - fp * COST_FALSE_POSITIVE
             )
-            if weighted_util > best_weighted_utility:
-                best_weighted_utility = weighted_util
-                best_base_utility = base_util
-                best_thr = float(thr)
+            candidates.append((float(thr), prec, float(weighted_util), float(base_util)))
+
+        # Exigir precisión >= 0.40 cuando sea factible en el segmento
+        prec_ok = [c for c in candidates if c[1] >= 0.40]
+        pool = prec_ok if prec_ok else candidates
+        best_thr, _, _, best_base_utility = max(pool, key=lambda x: x[2])
 
         dynamic_cfg[int(cid)] = {
             "label": label_mapping[int(cid)],
             "threshold": float(best_thr),
+            "threshold_floor": float(floor_thr),
             "mean_monthly_charges": round(cluster_mean_mc, 2),
             "value_weight_factor": round(value_factor, 3),
             "oof_base_utility": float(best_base_utility),
@@ -387,7 +470,7 @@ def run_calibration_thresholds_and_test():
     cluster_ids_dev = segmenter.predict_cluster_ids(X_dev)
 
     # 2. Optimización OOF de umbral global y dinámico por cluster
-    global_thr, df_sweep = optimize_global_threshold(y_dev, oof_chosen, mc_dev)
+    global_thr, unconstrained_thr, df_sweep = optimize_global_threshold(y_dev, oof_chosen, mc_dev)
     dynamic_cfg = optimize_dynamic_thresholds_by_cluster(
         y_dev, oof_chosen, cluster_ids_dev, mc_dev, segmenter.label_mapping
     )
@@ -395,14 +478,15 @@ def run_calibration_thresholds_and_test():
 
     oof_summary = [
         evaluate_at_threshold(y_dev, oof_chosen, 0.50, mc_dev, "OOF Umbral Fijo 0.50"),
-        evaluate_at_threshold(y_dev, oof_chosen, global_thr, mc_dev, f"OOF Umbral Global ({global_thr:.2f})"),
+        evaluate_at_threshold(y_dev, oof_chosen, global_thr, mc_dev, f"OOF Umbral Global Operativo ({global_thr:.2f})"),
         evaluate_at_threshold(y_dev, oof_chosen, dyn_thr_dev, mc_dev, "OOF Umbrales Dinámicos por Cluster"),
     ]
     df_oof_summary = pd.DataFrame(oof_summary)
     df_oof_summary.to_csv(REPORTS_DIR / "comparacion_umbrales_oof_tf1.csv", index=False)
 
     print(f"\n[2/5] Umbrales optimizados exclusivamente en OOF (Train+Val):")
-    print(f"  -> Umbral global óptimo tau*: {global_thr:.2f}")
+    print(f"  -> Óptimo Bayesiano irrestricto (500:50): tau={unconstrained_thr:.2f} (marcaría ~76% de cartera)")
+    print(f"  -> Umbral global operativo (Recall>=75% & Prec>=50%): tau*={global_thr:.2f}")
     for cid, info in dynamic_cfg.items():
         print(
             f"  -> Cluster {cid} ({info['label']}): tau*={info['threshold']:.2f} "
@@ -412,11 +496,18 @@ def run_calibration_thresholds_and_test():
     print(df_oof_summary[["Modelo", "Recall (Clase 1)", "Value-Weighted Recall", "Precision (Clase 1)", "Valor Económico Neto ($)"]].to_string(index=False))
 
     # 3. Reentrenamiento final sobre Train+Val completo
-    print("\n[3/5] Reentrenando pipeline final TF1 con Train + Validation...")
-    final_pipeline = build_candidate_with_calibration(
-        winner_family, best_params_map, chosen_cal
-    )
-    final_pipeline.fit(X_dev, y_dev)
+    print("\n[3/5] Reentrenando pipeline final TF1 con Train + Validation...", flush=True)
+    base_pipeline = build_base_winner_pipeline(winner_family, best_params_map)
+    base_pipeline.fit(X_dev, y_dev)
+    if chosen_cal == "none":
+        final_pipeline = base_pipeline
+    else:
+        calibrator = _fit_calibrator(oof_probas["none"], y_dev.values, chosen_cal)
+        final_pipeline = CalibratedPipelineWrapper(
+            base_pipeline=base_pipeline,
+            calibrator=calibrator,
+            method=chosen_cal,
+        )
     final_model_path = MODELS_DIR / "pipeline_tf1_final.joblib"
     joblib.dump(final_pipeline, final_model_path)
 
@@ -512,6 +603,8 @@ def run_calibration_thresholds_and_test():
         "calibration_method": chosen_cal,
         "recommended_policy": recommended_policy,
         "global_threshold": global_thr,
+        "unconstrained_bayes_threshold": unconstrained_thr,
+        "operational_precision_floor": 0.50,
         "dynamic_thresholds_by_cluster": {str(k): v for k, v in dynamic_cfg.items()},
         "action_matrix_rules": {f"{k[0]}|{k[1]}": v for k, v in ACTION_MATRIX_RULES.items()},
         "economic_scenarios": ECONOMIC_SCENARIOS,

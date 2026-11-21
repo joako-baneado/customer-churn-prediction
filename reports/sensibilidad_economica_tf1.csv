@@ -1,0 +1,16 @@
+Modelo,Escenario_Key,Escenario,Costo_FN,Costo_FP,Beneficio_TP,TN,FP,FN,TP,Valor Económico Neto ($)
+Baseline Trivial (Dummy),base,Escenario Base (Supuesto TP1),500.0,50.0,350.0,776,0,281,0,-140500.0
+Baseline Trivial (Dummy),pesimista_30pct,Escenario Pesimista (30% efectividad de retención),500.0,50.0,105.0,776,0,281,0,-140500.0
+Baseline Trivial (Dummy),agresivo_fp100,Escenario Agresivo (Costo intervención FP = $100),500.0,100.0,350.0,776,0,281,0,-140500.0
+Baseline Heurístico,base,Escenario Base (Supuesto TP1),500.0,50.0,350.0,684,92,158,123,-40550.0
+Baseline Heurístico,pesimista_30pct,Escenario Pesimista (30% efectividad de retención),500.0,50.0,105.0,684,92,158,123,-70685.0
+Baseline Heurístico,agresivo_fp100,Escenario Agresivo (Costo intervención FP = $100),500.0,100.0,350.0,684,92,158,123,-45150.0
+TP1: Random Forest (0.50),base,Escenario Base (Supuesto TP1),500.0,50.0,350.0,630,146,83,198,20500.0
+TP1: Random Forest (0.50),pesimista_30pct,Escenario Pesimista (30% efectividad de retención),500.0,50.0,105.0,630,146,83,198,-28010.0
+TP1: Random Forest (0.50),agresivo_fp100,Escenario Agresivo (Costo intervención FP = $100),500.0,100.0,350.0,630,146,83,198,13200.0
+TF1 Umbral Global (0.20),base,Escenario Base (Supuesto TP1),500.0,50.0,350.0,542,234,53,228,41600.0
+TF1 Umbral Global (0.20),pesimista_30pct,Escenario Pesimista (30% efectividad de retención),500.0,50.0,105.0,542,234,53,228,-14260.0
+TF1 Umbral Global (0.20),agresivo_fp100,Escenario Agresivo (Costo intervención FP = $100),500.0,100.0,350.0,542,234,53,228,29900.0
+TF1 Umbrales Dinámicos,base,Escenario Base (Supuesto TP1),500.0,50.0,350.0,569,207,66,215,31900.0
+TF1 Umbrales Dinámicos,pesimista_30pct,Escenario Pesimista (30% efectividad de retención),500.0,50.0,105.0,569,207,66,215,-20775.0
+TF1 Umbrales Dinámicos,agresivo_fp100,Escenario Agresivo (Costo intervención FP = $100),500.0,100.0,350.0,569,207,66,215,21550.0
