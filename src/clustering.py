@@ -474,4 +474,8 @@ def run_clustering_pipeline() -> ValueClusterSegmenter:
 
 
 if __name__ == "__main__":
-    run_clustering_pipeline()
+    # Importar desde src.clustering garantiza que ValueClusterSegmenter se serialice
+    # bajo el módulo 'src.clustering' y no bajo '__main__' al cargar con joblib.
+    from src.clustering import run_clustering_pipeline as _run_clustering
+
+    _run_clustering()
