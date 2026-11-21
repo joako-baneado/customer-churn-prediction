@@ -19,10 +19,13 @@ from src.config import (
     ID_COLUMN,
     NUMERICAL_FEATURES,
     CATEGORICAL_FEATURES,
+    ALL_NUMERICAL_FEATURES_TF1,
+    ALL_CATEGORICAL_FEATURES_TF1,
     RANDOM_STATE,
     VALIDATION_SIZE,
     TEST_SIZE
 )
+from src.features import TelcoFeatureEngineer
 
 
 def load_raw_dataset(filepath=DATA_RAW_PATH) -> pd.DataFrame:
@@ -201,3 +204,64 @@ def build_preprocessor() -> ColumnTransformer:
     )
 
     return preprocessor
+
+
+def build_preprocessor_tf1(use_feature_engineering: bool = True) -> Pipeline:
+    """
+    Construye el preprocesador reproducible para TF1.
+    Encadena TelcoFeatureEngineer (stateless por fila) + ColumnTransformer
+    con nombres de salida legibles para interpretabilidad SHAP.
+    """
+    num_cols = ALL_NUMERICAL_FEATURES_TF1 if use_feature_engineering else NUMERICAL_FEATURES
+    cat_cols = ALL_CATEGORICAL_FEATURES_TF1 if use_feature_engineering else CATEGORICAL_FEATURES
+
+    numeric_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
+        ]
+    )
+
+    categorical_transformer = Pipeline(
+        steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            (
+                "onehot",
+                OneHotEncoder(
+                    drop="if_binary",
+                    handle_unknown="ignore",
+                    sparse_output=False,
+                ),
+            ),
+        ]
+    )
+
+    column_transformer = ColumnTransformer(
+        transformers=[
+            ("num", numeric_transformer, num_cols),
+            ("cat", categorical_transformer, cat_cols),
+        ],
+        remainder="drop",
+        verbose_feature_names_out=False,
+    )
+
+    return Pipeline(
+        steps=[
+            ("feature_engineer", TelcoFeatureEngineer(enabled=use_feature_engineering)),
+            ("column_transformer", column_transformer),
+        ]
+    )
+
+
+def get_dev_and_test_splits(df: pd.DataFrame | None = None):
+    """
+    Retorna (X_dev, X_test, y_dev, y_test) concatenando Train + Validation
+    del TP1 como conjunto de desarrollo (5,986 filas) y preservando intacto
+    el Test holdout (1,057 filas) con el mismo random_state=42.
+    """
+    if df is None:
+        df = load_raw_dataset()
+    X_train, X_val, X_test, y_train, y_val, y_test = split_data(df)
+    X_dev = pd.concat([X_train, X_val], axis=0).reset_index(drop=True)
+    y_dev = pd.concat([y_train, y_val], axis=0).reset_index(drop=True)
+    return X_dev, X_test.reset_index(drop=True), y_dev, y_test.reset_index(drop=True)
