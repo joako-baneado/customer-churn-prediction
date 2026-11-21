@@ -1,0 +1,5 @@
+Modelo_Referencia,Modelo_Comparado,Delta_PR_AUC_Media,Wilcoxon_Stat,Wilcoxon_p_value,TTest_Stat,TTest_p_value,Significativo_alpha_0.05
+Stacking Heterogéneo (LR+LGBM+XGB),XGBoost (Optuna),0.0007325175685603425,23.0,0.6953125,0.5335943446179781,0.6065470312637824,False
+Stacking Heterogéneo (LR+LGBM+XGB),LightGBM (Optuna),0.0015563259390664608,17.0,0.322265625,1.1668647382448973,0.2732511082077513,False
+Stacking Heterogéneo (LR+LGBM+XGB),Regresión Logística (Optuna),0.006789187956676557,6.0,0.02734375,2.605984489511579,0.028457543438866882,True
+Stacking Heterogéneo (LR+LGBM+XGB),Random Forest (Optuna),0.009841951824027695,0.0,0.001953125,3.8054156929508434,0.004182445222580217,True

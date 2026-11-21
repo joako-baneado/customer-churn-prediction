@@ -1,0 +1,48 @@
+{
+  "winner_cv_name": "Stacking Heterogéneo (LR+LGBM+XGB)",
+  "winner_cv_family": "stacking",
+  "winner_cv_pr_auc_mean": 0.6731554185611408,
+  "optuna_cv5_scores": {
+    "logistic_regression": 0.661469409174018,
+    "random_forest": 0.6593715264006127,
+    "lightgbm": 0.6670191332526141,
+    "xgboost": 0.6679919343382413
+  },
+  "best_params_by_family": {
+    "logistic_regression": {
+      "C": 0.7956749229281326,
+      "l1_ratio": 0.8875152379959901,
+      "class_weight": null
+    },
+    "random_forest": {
+      "n_estimators": 400,
+      "max_depth": 11,
+      "min_samples_leaf": 12,
+      "max_features": "sqrt",
+      "class_weight": null
+    },
+    "lightgbm": {
+      "n_estimators": 450,
+      "learning_rate": 0.012707942999213693,
+      "num_leaves": 24,
+      "max_depth": 3,
+      "min_child_samples": 26,
+      "subsample": 0.7860370513913187,
+      "colsample_bytree": 0.7085396127095583,
+      "reg_alpha": 0.7838134236608698,
+      "reg_lambda": 0.0060780830996819525,
+      "scale_pos_weight": 2.77
+    },
+    "xgboost": {
+      "n_estimators": 300,
+      "learning_rate": 0.023750875411808082,
+      "max_depth": 2,
+      "min_child_weight": 10,
+      "subsample": 0.8183885046672651,
+      "colsample_bytree": 0.8435851304950277,
+      "reg_alpha": 0.02546460385791973,
+      "reg_lambda": 0.003447534250387205,
+      "scale_pos_weight": 1.0
+    }
+  }
+}
