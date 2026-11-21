@@ -1,10 +1,33 @@
-# Dependencias del Proyecto Integrador - CC209 Data Mining Tools
+# Dependencias del Proyecto Integrador - CC209 Data Mining Tools (TP1 + TF1)
 # Python 3.10+
 numpy>=1.24.0
 pandas>=2.0.0
 scikit-learn>=1.3.0
+scipy>=1.11.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
+plotly>=5.18.0
 joblib>=1.3.0
+
+# Modelamiento avanzado, optimizacion y tracking (TF1)
+lightgbm>=4.0.0
+xgboost>=2.0.0
+optuna>=3.6.0
+mlflow>=2.12.0
+
+# Interpretabilidad y contratos de datos (TF1)
+shap>=0.45.0
+pydantic>=2.0.0
+
+# Despliegue funcional (TF1)
+streamlit>=1.32.0
+
+# Notebooks, pruebas y generacion de entregables
 nbformat>=5.9.0
+nbconvert>=7.0.0
+jupyter>=1.0.0
 ipykernel>=6.25.0
+pytest>=8.0.0
+python-pptx>=0.6.23
+reportlab>=4.0.0
+
