@@ -52,3 +52,14 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# MLflow tracking artifacts (exportados a CSV en reports/)
+mlruns/
+mlflow.db
+mlartifacts/
+
+# Pytest & temporary caches
+.pytest_cache/
+.coverage
+htmlcov/
+
